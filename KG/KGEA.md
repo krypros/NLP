@@ -47,3 +47,49 @@
 使用正交矩阵建模关系嵌入和时间嵌入  
 权重学习利用了GAT  
 
+
+## [2021 ACL] Knowing the No-match: Entity Alignment with Dangling Cases
+
+图谱中存在找不到对齐的实体：dangling entities  
+设计了一个多任务学习框架用于实体对齐和自由(悬空)实体检测（基于最近邻分布）  
+
+- 最近邻分类
+- 边缘排序
+- 背景排序
+
+检测并过滤悬空实体，能提供更健壮的对齐  
+
+![1663159046222](image/KGEA/1663159046222.png)
+
+1）最近邻分类  
+使用前馈网络(FFN)分类器对实体进行二分类
+$p(y=1 | x) = \mathrm{sigmoid} \left(FFN(\mathbf{M}x - x_\mathrm{nn} ) \right)$
+
+$\mathcal{D}$：悬空实体集合  
+$\mathcal{A}$：可匹配实体集合  
+对于所有$x \in \mathcal{D} \cup \mathcal{A}$
+$$
+\begin{aligned}
+\mathcal{L}_{x}=-&\left(y_{x} \log (p(y=1 \mid x))\right.\\
+&\left.+\left(1-y_{x}\right) \log (1-p(y=1 \mid x))\right)
+\end{aligned}
+$$
+
+2）边缘排序  
+让悬空实体在嵌入空间中具有单独的表示
+> 在悬空实体和它们采样的nn之间设置一个距离边界
+$$
+\mathcal{L}_{x}=\max \left(0, \lambda-\left\|\mathbf{M} \mathbf{x}-\mathbf{x}_{\mathrm{nn}}\right\|\right)
+$$
+
+3）背景排序  
+边缘距离的选择是个困难的问题。
+> lets a classifier equally penalize the output logits for samples of classes that are unknown to training (i.e. background classes)
+
+将所有悬空实体视为嵌入空间的“背景”，它们应该远离可匹配的对象  
+减少了悬空实体嵌入的规模，以进一步在可匹配实体和悬空实体的嵌入之间提供分离。对于每个悬空实体$x$，$X_{x}^{v}$为大小为$v$的随机抽样目标实体的集合
+$$
+\mathcal{L}_{x}=\sum_{x^{\prime} \in X_{x}^{v}}\left|\lambda_{x}-\left\|\mathbf{M} \mathbf{x}-\mathbf{x}^{\prime}\right\|\right|+\alpha\|\mathbf{x}\|
+$$
+使得相对较近的实体远离源实体，不需要预定义的边缘距离。  
+$\lambda_{x}=\frac{1}{v} \sum_{x^{\prime} \in X_{x}^{v}}\left\|\mathbf{M} \mathbf{x}-\mathbf{x}^{\prime}\right\|$
